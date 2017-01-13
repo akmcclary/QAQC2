@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "#\n# This is a Shiny web application. You can run the application by clicking\n# the 'Run App' button above.\n#\n# Find out more about building applications with Shiny here:\n#\n#    http://shiny.rstudio.com/\n#\n\nlibrary(shiny)\nlibrary(ggplot2)\nlibrary(RODBC)\nlibrary(dplyr)\nlibrary(plotly)\nlibrary(shiny)\nlibrary(\"magrittr\")\nlibrary(\"shinydashboard\")\n#Open connection to SQL Server using system DSN\ncn <- odbcConnect(\"RDSN\",uid=\"Coho_Admin\",pwd = \"R0ppP1&ddzos\")\n#Get tagged fish from the current year using pre-written SQL View\n\nEFishingFish <- sqlQuery(cn,\"SELECT Survey, Year, Species, PITNumber, ForkLength, Weight, CarcassTagObsApp, Comments, ReachName, Agency FROM dbo.tblDataIndividuals WHERE (Species = N'coho salmon') AND (Year > 2014) OR (Species = N'steelhead') AND (Year > 2014)\")\nEFishingFish[EFishingFish == -9999] = NA\nEFishingFish<-mutate_each(EFishingFish,funs(toupper))\nspeciesList<-c(\"COHO SALMON\", \"STEELHEAD\")\nsurveyList<-c(\"EF\", \"DSMT\")\nyearList<-c(2014,2015,2016)\nEFishingFish<- transform(EFishingFish, ForkLength = as.numeric(ForkLength))\nEFishingFish<- transform(EFishingFish, Weight = as.numeric(Weight))\n# Define UI for application that draws a histogram\nui <- shinyUI((\n  \n  # Application title\n  titlePanel(\"E-Fishing Data\")\n  \n  # Sidebar with a slider input for number of bins \n  sidebarLayout(\n    sidebarPanel(\n      selectInput(\"SpeciesSelected\", \"Species:\", speciesList, selected = \"COHO SALMON\"),\n      selectInput(\"YearSelected\", \"Year:\", yearList, selected = 2016),\n      selectInput(\"SurveySelected\", \"Survey\", surveyList, selected = \"EF\" ),\n      radioButtons(\"AgencySelected\", \"Select Agency\",c( \"UCCE\",\"SCWA\"))\n    ),\n    \n    # Show a plot of the generated distribution\n    mainPanel(\n      plotlyOutput(\"lengthWeightGraph\")\n    )\n  )\n))\n\n# Define server logic required to draw a histogram\nserver <- shinyServer(function(input, output) {\n  \n  output$lengthWeightGraph<-renderPlotly({\n    fishGraph<- EFishingFish%>%filter(Species == input$SpeciesSelected)%>%filter(Year==input$YearSelected)%>%filter(Agency==input$AgencySelected)%>%filter(Survey==input$SurveySelected)%>% ggplot(aes(x = Weight, y = ForkLength, label= PITNumber)) + geom_point()\n    ggplotly(fishGraph)\n  })\n  \n})\n\n# Run the application \nshinyApp(ui = ui, server = server)\n\n",
+    "created" : 1484278588651.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2281414540",
+    "id" : "B214BEDA",
+    "lastKnownWriteTime" : 1484278668,
+    "last_content_update" : -2147483648,
+    "path" : "S:/Coho/Databases/SQL/Prototypes/RScripts/QAQC2/QAQC/app.R",
+    "project_path" : "QAQC/app.R",
+    "properties" : {
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
