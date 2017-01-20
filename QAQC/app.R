@@ -22,11 +22,12 @@ surveyList<-c("EF", "DSMT")
 yearList<-c(2014,2015,2016)
 EFishingFish<- transform(EFishingFish, ForkLength = as.numeric(ForkLength))
 EFishingFish<- transform(EFishingFish, Weight = as.numeric(Weight))
-# Define UI for application that draws a histogram
+EFishingFish$Weight<-round(EFishingFish$Weight,2)
+
 ui <- dashboardPage(
   dashboardHeader(title = "QAQC Dashboard"),
   
-  # Sidebar with a slider input for number of bins 
+
   dashboardSidebar(
       selectInput("SpeciesSelected", "Species:", speciesList, selected = "COHO SALMON"),
       selectInput("YearSelected", "Year:", yearList, selected = 2016),
@@ -34,16 +35,16 @@ ui <- dashboardPage(
       radioButtons("AgencySelected", "Select Agency",c( "UCCE","SCWA"))
     ),
     
-    # Show a plot of the generated distribution
+
     dashboardBody(
       plotlyOutput("lengthWeightGraph"),
-      verbatimTextOutput("boxselect"),
-      verbatimTextOutput("missingmeasurements")
+      DT::dataTableOutput("selectedFish"),
+      DT::dataTableOutput("missingmeasurements")
     )
   )
 
 
-# Define server logic required to draw a histogram
+
 server <- shinyServer(function(input, output) {
   
   output$lengthWeightGraph<-renderPlotly({
@@ -51,29 +52,27 @@ server <- shinyServer(function(input, output) {
     ggplotly(fishGraph)
   })
   
-  output$boxselect<-renderPrint({
+  output$selectedFish<-renderDataTable({
     eventdata<-event_data("plotly_selected")
     if(is.null(eventdata)==T)return(NULL)
     mergedData<- merge(eventdata, EFishingFish, by.x = "key",by.y = "IndividualID" )
     mergedData<-mergedData%>%filter(x!=0)
-    mergedData
+    selectedFishTable<- mergedData[,c("ReachName", "key", "Survey", "Year", "Species","PITNumber","ForkLength", "Weight",  "Comments" )]
+    DT::datatable(selectedFishTable, colnames = c("Reach", "IndividualID", "Survey", "Year", "Species","PITNumber","Fork Length", "Weight",  "Comments" ), caption = "Selected Fish", rownames = FALSE, options = list(searching = FALSE, paging= FALSE))
+    
   }
   
     )
-  output$missingmeasurements<- renderPrint({
+  output$missingmeasurements<- renderDataTable({
       missingfish<-EFishingFish%>%filter(Species == input$SpeciesSelected)%>%filter(Year==input$YearSelected)%>%filter(Agency==input$AgencySelected)%>%filter(Survey==input$SurveySelected)%>%filter(is.na(Weight)|is.na(ForkLength))
-      missingfish
+      fishTable<- missingfish[,c("ReachName", "IndividualID", "Survey", "Year", "Species","PITNumber","ForkLength", "Weight",  "Comments" )]
+      DT::datatable(fishTable, colnames = c("Reach", "IndividualID", "Survey", "Year", "Species","PITNumber","Fork Length", "Weight",  "Comments" ), caption = "Fish with missing Fork Lengths or weights", rownames = FALSE, options = list(searching = FALSE, paging= FALSE))
+     
   })  
   
-  # output$DataTableSelectedPoints<-renderDataTable({
-  #   event.data<-event_data("plotly_selected")
-  #   if(is.null(event.data)==T)return(NULL)
-  #   DT::datatable(event.data, colnames = c("Survey", "Year", "Species", "PITNumber", "ForkLength", "Weight", "Comments", "ReachName", "Agency"), rownames = FALSE, options = list(order = list(list(0, 'desc')), autoWidth = FALSE))
-  #   
-  #   })
   
 })
 
-# Run the application 
+
 shinyApp(ui = ui, server = server)
 
